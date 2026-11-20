@@ -1,0 +1,2314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestão de Rotas e OSs</title>
+
+  <!-- Leaflet CSS & JS (Mapa) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- jsPDF & AutoTable (Exportação PDF A4) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- FontAwesome Ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- CSS Unificado -->
+  <style>
+    /* Reset e Base */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f1f5f9;
+      color: #1e293b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    /* Cabeçalho */
+    .app-header {
+      background-color: #1e3a8a;
+      color: #ffffff;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    }
+
+    .header-container {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      background-color: #1d4ed8;
+      padding: 0.625rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 1.25rem;
+      color: #bfdbfe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    @media (min-width: 640px) {
+      .brand-title {
+        font-size: 1.25rem;
+      }
+    }
+
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: #bfdbfe;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background-color: rgba(23, 37, 84, 0.6);
+      border: 1px solid #1d4ed8;
+      padding: 0.375rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+    }
+
+    .status-dot {
+      width: 0.625rem;
+      height: 0.625rem;
+      border-radius: 9999px;
+      background-color: #38bdf8;
+    }
+
+    .status-label {
+      color: #dbeafe;
+      font-weight: 500;
+    }
+
+    /* Barra de Navegação por Abas */
+    .tabs-bar {
+      background-color: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .tabs-container {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 0 1rem;
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 0.875rem 0.875rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: #1e3a8a;
+      background-color: #f8fafc;
+    }
+
+    .tab-btn.active {
+      color: #1d4ed8;
+      border-bottom-color: #2563eb;
+    }
+
+    .tab-badge {
+      background-color: #e2e8f0;
+      color: #334155;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.1rem 0.5rem;
+      border-radius: 9999px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .tab-btn.active .tab-badge {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
+    /* Container Principal e Cards */
+    .main-container {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 1.25rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .main-container {
+        padding: 1.5rem 1.25rem;
+      }
+      .tabs-container {
+        padding: 0 1.25rem;
+        gap: 0.5rem;
+      }
+      .tab-btn {
+        padding: 0.875rem 1.125rem;
+        font-size: 0.875rem;
+      }
+    }
+
+    .card {
+      background-color: #ffffff;
+      padding: 1.125rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+    }
+
+    @media (min-width: 768px) {
+      .card {
+        padding: 1.25rem;
+      }
+    }
+
+    .top-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      align-items: stretch;
+    }
+
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .top-grid {
+        grid-template-columns: repeat(12, 1fr);
+      }
+      .left-column {
+        grid-column: span 4;
+      }
+      .map-section {
+        grid-column: span 8;
+      }
+    }
+
+    .card-header-border {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .section-subtitle {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .icon-blue {
+      color: #2563eb;
+      margin-right: 0.375rem;
+    }
+
+    .icon-indigo {
+      color: #4f46e5;
+      margin-right: 0.375rem;
+    }
+
+    .icon-amber {
+      color: #d97706;
+      margin-right: 0.375rem;
+    }
+
+    .icon-red {
+      color: #f87171;
+    }
+
+    .edit-badge {
+      background-color: #fef3c7;
+      color: #92400e;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.125rem 0.625rem;
+      border-radius: 9999px;
+    }
+
+    /* Formulário */
+    .os-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+    }
+
+    .grid-2-cols {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .grid-location {
+      display: grid;
+      grid-template-columns: 8fr 4fr;
+      gap: 0.625rem;
+    }
+
+    .location-divider {
+      padding-top: 0.375rem;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .group-caption {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 0.25rem;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.25rem;
+    }
+
+    .label-row .form-label {
+      margin-bottom: 0;
+    }
+
+    .char-counter {
+      font-size: 0.6875rem;
+      color: #94a3b8;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      color: #1e293b;
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.5rem;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .form-control:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    }
+
+    .textarea-notes {
+      resize: none;
+    }
+
+    /* Cadastro em Lote (JSON) */
+    .bulk-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .textarea-json {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      background-color: #f8fafc;
+      resize: vertical;
+    }
+
+    .bulk-feedback {
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+    }
+
+    .bulk-feedback-success {
+      background-color: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .bulk-feedback-error {
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    /* Botões */
+    .form-actions {
+      padding-top: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: inherit;
+      font-weight: 600;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      flex: 1;
+      background-color: #2563eb;
+      color: #ffffff;
+      padding: 0.625rem 1rem;
+      font-size: 0.875rem;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: #1d4ed8;
+    }
+
+    .btn-indigo {
+      width: 100%;
+      background-color: #4f46e5;
+      color: #ffffff;
+      padding: 0.625rem 1rem;
+      font-size: 0.875rem;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-indigo:hover:not(:disabled) {
+      background-color: #4338ca;
+    }
+
+    .btn-success {
+      flex: 1;
+      background-color: #059669;
+      color: #ffffff;
+      padding: 0.625rem 1rem;
+      font-size: 0.875rem;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background-color: #047857;
+    }
+
+    .btn-secondary {
+      background-color: #e2e8f0;
+      color: #334155;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .btn-secondary:hover {
+      background-color: #cbd5e1;
+    }
+
+    .btn-dark {
+      background-color: #1e293b;
+      color: #ffffff;
+      font-size: 0.75rem;
+      padding: 0.625rem 1rem;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-dark:hover:not(:disabled) {
+      background-color: #0f172a;
+    }
+
+    .btn-danger {
+      background-color: #dc2626;
+      color: #ffffff;
+      font-size: 0.75rem;
+      padding: 0.625rem 0.9rem;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background-color: #b91c1c;
+    }
+
+    .btn-danger-outline {
+      background-color: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      font-size: 0.75rem;
+      padding: 0.5625rem 0.9rem;
+    }
+
+    .btn-danger-outline:hover:not(:disabled) {
+      background-color: #fee2e2;
+      border-color: #fca5a5;
+    }
+
+    .btn-outline {
+      width: 100%;
+      background-color: #ffffff;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+    }
+
+    .btn-outline:hover {
+      background-color: #f1f5f9;
+    }
+
+    /* Mapa */
+    .map-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .map-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .map-counter-badge {
+      background-color: #dbeafe;
+      color: #1e40af;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+    }
+
+    #map {
+      min-height: 440px;
+      width: 100%;
+      border-radius: 0.5rem;
+      border: 1px solid #e2e8f0;
+      flex: 1;
+      z-index: 1;
+    }
+
+    @media (min-width: 1024px) {
+      #map {
+        min-height: 560px;
+      }
+    }
+
+    /* Marcador Colorido Customizado no Mapa */
+    .custom-pin-wrapper {
+      background: transparent;
+      border: none;
+    }
+
+    .custom-pin {
+      width: 26px;
+      height: 26px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    }
+
+    .custom-pin::after {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ffffff;
+    }
+
+    .pin-atendida {
+      background-color: #10b981;
+    }
+
+    .pin-nao-atendida {
+      background-color: #ef4444;
+    }
+
+    .pin-aguardando {
+      background-color: #f59e0b;
+    }
+
+    .pin-indefinido {
+      background-color: #64748b;
+    }
+
+    /* Popup do Mapa (Leaflet) */
+    .map-popup {
+      font-size: 0.75rem;
+      min-width: 195px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .map-popup-title {
+      font-weight: 700;
+      color: #1e3a8a;
+      font-size: 0.875rem;
+    }
+
+    .map-popup-notes {
+      font-style: italic;
+      color: #475569;
+      padding-top: 0.25rem;
+      margin-top: 0.125rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    /* Barra de Filtros e Ações da Tabela */
+    .table-top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .table-top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .filters-box {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      background-color: #f8fafc;
+      padding: 0.875rem;
+      border-radius: 0.5rem;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .filters-box {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .filters-box {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .filter-label {
+      display: block;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .filter-control {
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.375rem;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 0.75rem;
+    }
+
+    .search-field {
+      padding-left: 2rem;
+    }
+
+    .filter-btn-wrapper {
+      display: flex;
+      align-items: flex-end;
+    }
+
+    /* Barra de Seleção em Massa (Visível no Celular) */
+    .mobile-select-bar {
+      display: none;
+    }
+
+    .os-checkbox {
+      width: 1.05rem;
+      height: 1.05rem;
+      accent-color: #2563eb;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+
+    /* Tabela de Ordens de Serviço (Desktop Horizontal) */
+    .table-wrapper {
+      width: 100%;
+    }
+
+    .os-table {
+      width: 100%;
+      text-align: left;
+      border-collapse: collapse;
+    }
+
+    .os-table thead tr {
+      border-bottom: 1px solid #e2e8f0;
+      background-color: #f8fafc;
+    }
+
+    .os-table th {
+      padding: 0.65rem 0.5rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .os-table th.col-select,
+    .os-table td.col-select {
+      width: 36px;
+      text-align: center;
+      padding-left: 0.65rem;
+      padding-right: 0.35rem;
+    }
+
+    .os-table tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.8125rem;
+      transition: background-color 0.15s ease;
+    }
+
+    .os-table tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    .os-table tbody tr.row-selected {
+      background-color: #eff6ff;
+    }
+
+    .os-table tbody tr.row-selected:hover {
+      background-color: #dbeafe;
+    }
+
+    .os-table td {
+      padding: 0.65rem 0.5rem;
+      vertical-align: middle;
+    }
+
+    .empty-row {
+      padding: 2rem 0.75rem !important;
+      text-align: center;
+      color: #94a3b8;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
+    .os-link-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: #1d4ed8;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .os-link-btn:hover {
+      text-decoration: underline;
+    }
+
+    .os-link-btn i {
+      font-size: 0.7rem;
+    }
+
+    .cell-client {
+      color: #475569;
+      font-weight: 500;
+    }
+
+    .text-muted-light {
+      color: #cbd5e1;
+    }
+
+    .cell-type {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #334155;
+      max-width: 170px;
+      line-height: 1.3;
+    }
+
+    .cell-location {
+      font-size: 0.75rem;
+      color: #475569;
+    }
+
+    .cell-dates {
+      font-size: 0.75rem;
+      line-height: 1.35;
+    }
+
+    .date-collection {
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .date-scheduled {
+      color: #64748b;
+    }
+
+    .cell-notes {
+      font-size: 0.75rem;
+      color: #64748b;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Seletor Interativo de Data de Atendimento na Tabela */
+    .attendance-date-input {
+      padding: 0.25rem 0.45rem;
+      font-size: 0.75rem;
+      font-family: inherit;
+      color: #1e293b;
+      background-color: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.375rem;
+      outline: none;
+      width: 122px;
+      transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .attendance-date-input:hover {
+      border-color: #94a3b8;
+    }
+
+    .attendance-date-input:focus {
+      background-color: #ffffff;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    }
+
+    .attendance-date-filled {
+      background-color: #ecfdf5;
+      border-color: #6ee7b7;
+      color: #065f46;
+      font-weight: 600;
+    }
+
+    /* Seletor Interativo de Status na Tabela */
+    .status-select-inline {
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-family: inherit;
+      border: 1px solid transparent;
+      cursor: pointer;
+      outline: none;
+      transition: filter 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .status-select-inline:hover {
+      filter: brightness(0.96);
+    }
+
+    .status-select-inline:focus {
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+    }
+
+    .status-badge-popup {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+
+    .badge-atendida {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-nao-atendida {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-aguardando {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-indefinido {
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+
+    /* Botões de Ação na Tabela */
+    .actions-cell {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .action-btn {
+      border: none;
+      padding: 0.25rem 0.45rem;
+      border-radius: 0.25rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      margin-left: 0.2rem;
+      transition: background-color 0.15s ease;
+    }
+
+    .action-map {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .action-map:hover {
+      background-color: #dbeafe;
+    }
+
+    .action-edit {
+      background-color: #fffbeb;
+      color: #b45309;
+    }
+
+    .action-edit:hover {
+      background-color: #fef3c7;
+    }
+
+    .action-delete {
+      background-color: #fef2f2;
+      color: #dc2626;
+    }
+
+    .action-delete:hover {
+      background-color: #fee2e2;
+    }
+
+    /* =========================================================================
+       LAYOUT VERTICAL DA TABELA PARA DISPOSITIVOS MÓVEIS (< 768px)
+       ========================================================================= */
+    @media (max-width: 767px) {
+      .mobile-select-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.625rem 0.875rem;
+        margin-bottom: 0.875rem;
+      }
+
+      .mobile-select-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+      }
+
+      .mobile-selected-hint {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #1d4ed8;
+      }
+
+      .os-table,
+      .os-table thead,
+      .os-table tbody,
+      .os-table th,
+      .os-table td,
+      .os-table tr {
+        display: block;
+        width: 100%;
+      }
+
+      .os-table thead {
+        display: none;
+      }
+
+      .os-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+      }
+
+      .os-table tbody tr {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.625rem;
+        padding: 0.5rem 0.875rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      }
+
+      .os-table tbody tr:hover {
+        background-color: #ffffff;
+      }
+
+      .os-table tbody tr.row-selected {
+        background-color: #eff6ff;
+        border-color: #93c5fd;
+      }
+
+      .os-table tbody tr.row-selected:hover {
+        background-color: #eff6ff;
+      }
+
+      .os-table td,
+      .os-table td.col-select {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 0.55rem 0;
+        border-bottom: 1px solid #f1f5f9;
+        text-align: right;
+        white-space: normal;
+      }
+
+      .os-table td:last-child {
+        border-bottom: none;
+        padding-top: 0.75rem;
+        padding-bottom: 0.35rem;
+      }
+
+      .os-table td::before {
+        content: attr(data-label);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        text-align: left;
+        flex-shrink: 0;
+      }
+
+      /* Linha vazia centralizada sem rótulo */
+      .os-table td.empty-row {
+        display: block;
+        text-align: center;
+        border-bottom: none;
+        padding: 2rem 0.5rem !important;
+      }
+
+      .os-table td.empty-row::before {
+        display: none;
+      }
+
+      .cell-type {
+        max-width: 65%;
+        text-align: right;
+      }
+
+      .cell-dates {
+        text-align: right;
+      }
+
+      .cell-notes {
+        max-width: 65%;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        text-align: right;
+        word-break: break-word;
+      }
+
+      .attendance-date-input {
+        width: 136px;
+      }
+
+      .actions-cell {
+        justify-content: flex-end;
+      }
+
+      .actions-cell::before {
+        margin-right: auto;
+      }
+
+      .action-btn {
+        padding: 0.375rem 0.65rem;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cabeçalho -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-route"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">Amigos Soluções — Roteirização de OS</h1>
+          <p class="brand-subtitle">Gestão Operacional e Visualização Geográfica (GLP)</p>
+        </div>
+      </div>
+
+      <!-- Indicador de Armazenamento Local -->
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span class="status-label">Modo Local (Navegador)</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navegação por Abas -->
+  <nav class="tabs-bar" aria-label="Seções do aplicativo">
+    <div class="tabs-container">
+      <button type="button" id="tabBtnCadastro" class="tab-btn active" onclick="switchTab('cadastro')">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <span>Cadastro</span>
+      </button>
+
+      <button type="button" id="tabBtnOrdens" class="tab-btn" onclick="switchTab('ordens')">
+        <i class="fa-solid fa-table-list"></i>
+        <span>Ordens de Serviço Cadastradas</span>
+        <span id="tabOrdersCount" class="tab-badge">0</span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="main-container">
+
+    <!-- ABA 1: Cadastro + Mapa + Cadastro em Lote -->
+    <div id="tabPanelCadastro" class="tab-panel">
+      <div class="top-grid">
+
+        <!-- Coluna Esquerda: Cadastro Manual + Cadastro em Lote -->
+        <div class="left-column">
+
+          <!-- Card 1: Cadastro Manual / Edição -->
+          <section class="card form-section">
+            <div class="card-header-border">
+              <h2 id="formTitle" class="section-title">
+                <i class="fa-solid fa-file-circle-plus icon-blue"></i> Cadastrar Nova OS
+              </h2>
+              <span id="editBadge" class="edit-badge hidden">
+                Modo Edição
+              </span>
+            </div>
+
+            <form id="osForm" class="os-form">
+              <input type="hidden" id="editingId" value="" />
+
+              <!-- Nº OS e Código do Cliente -->
+              <div class="grid-2-cols">
+                <div class="form-group">
+                  <label for="osNumber" class="form-label">Nº da OS *</label>
+                  <input type="text" id="osNumber" class="form-control" required placeholder="Ex: 2265867" />
+                </div>
+                <div class="form-group">
+                  <label for="clientCode" class="form-label">Cód. Cliente</label>
+                  <input type="text" id="clientCode" class="form-control" placeholder="Ex: 1235003" />
+                </div>
+              </div>
+
+              <!-- Status da OS (Opcional) -->
+              <div class="form-group">
+                <label for="osStatus" class="form-label">Status da OS</label>
+                <select id="osStatus" class="form-control">
+                  <option value="Aguardando atendimento">Aguardando atendimento</option>
+                  <option value="Atendida">Atendida</option>
+                  <option value="Não atendida">Não atendida</option>
+                  <option value="Não definido">Não definido</option>
+                </select>
+              </div>
+
+              <!-- Classificação da OS (Opcional) -->
+              <div class="form-group">
+                <label for="osType" class="form-label">Classificação da OS</label>
+                <select id="osType" class="form-control">
+                  <option value="">Selecione o tipo de serviço (opcional)...</option>
+                  <option value="Troca de tanque">Troca de tanque</option>
+                  <option value="Troca de peças">Troca de peças</option>
+                  <option value="Instalação de medidor, regulador e fogão">Instalação de medidor, regulador e fogão</option>
+                  <option value="Instalação de medidor e regulador">Instalação de medidor e regulador</option>
+                  <option value="Instalação de medidor">Instalação de medidor</option>
+                  <option value="Instalação de regulador">Instalação de regulador</option>
+                  <option value="Instalação de fogão">Instalação de fogão</option>
+                  <option value="Manutenção diversas">Manutenção diversas</option>
+                  <option value="Teste de estanquidade">Teste de estanquidade</option>
+                </select>
+              </div>
+
+              <!-- Localização (Cidade e Estado) -->
+              <div class="location-divider">
+                <span class="group-caption">Localização</span>
+                
+                <div class="grid-location">
+                  <div class="form-group">
+                    <label for="city" class="form-label">Cidade *</label>
+                    <input type="text" id="city" class="form-control" required placeholder="Ex: Canoas" />
+                  </div>
+                  <div class="form-group">
+                    <label for="state" class="form-label">Estado *</label>
+                    <select id="state" class="form-control" required>
+                      <option value="RS" selected>RS</option>
+                      <option value="SC">SC</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Datas -->
+              <div class="grid-2-cols">
+                <div class="form-group">
+                  <label for="collectionDate" class="form-label">Coleta da OS *</label>
+                  <input type="date" id="collectionDate" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label for="scheduledDate" class="form-label">Data Agendada</label>
+                  <input type="date" id="scheduledDate" class="form-control" />
+                </div>
+              </div>
+
+              <!-- Observações -->
+              <div class="form-group">
+                <div class="label-row">
+                  <label for="notes" class="form-label">Observações</label>
+                  <span id="charCount" class="char-counter">0/150</span>
+                </div>
+                <textarea id="notes" class="form-control textarea-notes" rows="2" maxlength="150"
+                  placeholder="Detalhes do cliente, ausência, acesso (Máx. 150 caracteres)"></textarea>
+              </div>
+
+              <!-- Botões de Ação -->
+              <div class="form-actions">
+                <button type="submit" id="submitBtn" class="btn btn-primary">
+                  <i class="fa-solid fa-location-dot"></i>
+                  <span id="submitBtnText">Adicionar ao Mapa</span>
+                </button>
+
+                <button type="button" id="cancelEditBtn" class="btn btn-secondary hidden">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- Card 2: Cadastro em Lote (JSON) -->
+          <section class="card bulk-section">
+            <div class="card-header-border">
+              <h2 class="section-title">
+                <i class="fa-solid fa-file-import icon-indigo"></i> Cadastro em Lote (JSON)
+              </h2>
+            </div>
+
+            <div class="bulk-body">
+              <p class="section-subtitle">
+                Cole abaixo a lista de OSs no formato JSON e clique em <strong>Adicionar</strong> para lançar todas no mapa.
+              </p>
+
+              <div class="form-group">
+                <label for="bulkJsonInput" class="form-label">Dados das OSs (JSON)</label>
+                <textarea id="bulkJsonInput" class="form-control textarea-json" rows="6"
+                  placeholder='[
+  {
+    "os": "2259575",
+    "cliente": "152005",
+    "cidade": "Novo Hamburgo",
+    "coleta": "10/11/2026"
+  }
+]'></textarea>
+              </div>
+
+              <div id="bulkFeedback" class="bulk-feedback hidden"></div>
+
+              <button type="button" id="bulkAddBtn" class="btn btn-indigo">
+                <i class="fa-solid fa-layer-group"></i>
+                <span id="bulkBtnText">Adicionar</span>
+              </button>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- Coluna Direita: Mapa -->
+        <section class="card map-section">
+          <div class="map-header">
+            <div>
+              <h2 class="section-title">Visualização de Rotas no Mapa</h2>
+              <p class="section-subtitle">Clique nos marcadores para ver detalhes e status da OS</p>
+            </div>
+            <span id="mapCounter" class="map-counter-badge">
+              0 OSs no mapa
+            </span>
+          </div>
+
+          <div id="map"></div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- ABA 2: Ordens de Serviço Cadastradas -->
+    <div id="tabPanelOrdens" class="tab-panel hidden">
+      <section class="card table-section">
+        <div class="table-top-bar">
+          <div>
+            <h2 class="section-title">Ordens de Serviço Cadastradas</h2>
+            <p class="section-subtitle">Dados armazenados localmente neste navegador</p>
+          </div>
+
+          <div class="table-top-actions">
+            <button type="button" id="deleteSelectedBtn" class="btn btn-danger hidden" onclick="deleteSelectedOrders()">
+              <i class="fa-solid fa-trash-can"></i>
+              <span>Deletar Selecionadas (<span id="selectedCountBadge">0</span>)</span>
+            </button>
+
+            <button type="button" id="deleteAllBtn" class="btn btn-danger-outline" onclick="deleteAllOrders()">
+              <i class="fa-solid fa-trash"></i>
+              <span>Deletar Todas</span>
+            </button>
+
+            <button type="button" id="exportPdfBtn" class="btn btn-dark">
+              <i class="fa-solid fa-file-pdf icon-red"></i> Exportar PDF (A4)
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Filtros -->
+        <div class="filters-box">
+          <div class="form-group">
+            <label for="filterSearch" class="filter-label">Buscar OS ou Cód. Cliente</label>
+            <div class="search-input-wrapper">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input type="text" id="filterSearch" class="form-control filter-control search-field" placeholder="Nº OS ou Cód. Cliente..." />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="filterCity" class="filter-label">Filtrar por Cidade</label>
+            <select id="filterCity" class="form-control filter-control">
+              <option value="">Todas as cidades</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="filterStatus" class="filter-label">Filtrar por Status</label>
+            <select id="filterStatus" class="form-control filter-control">
+              <option value="">Todos os status</option>
+              <option value="Aguardando atendimento">Aguardando atendimento</option>
+              <option value="Atendida">Atendida</option>
+              <option value="Não atendida">Não atendida</option>
+              <option value="Não definido">Não definido</option>
+            </select>
+          </div>
+
+          <div class="filter-btn-wrapper">
+            <button id="clearFiltersBtn" class="btn btn-outline">
+              <i class="fa-solid fa-filter-circle-xmark"></i> Limpar Filtros
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Seleção Múltipla (Exibida no Celular) -->
+        <div id="mobileSelectBar" class="mobile-select-bar">
+          <label class="mobile-select-label" for="mobileSelectAllCheckbox">
+            <input type="checkbox" id="mobileSelectAllCheckbox" class="os-checkbox" onchange="toggleSelectAllVisible(this.checked)" />
+            <span>Selecionar todas visíveis</span>
+          </label>
+          <span id="mobileSelectedHint" class="mobile-selected-hint"></span>
+        </div>
+
+        <!-- Tabela Responsiva (Horizontal no PC / Cartões Verticais no Celular) -->
+        <div class="table-wrapper">
+          <table class="os-table">
+            <thead>
+              <tr>
+                <th class="col-select">
+                  <input type="checkbox" id="selectAllCheckbox" class="os-checkbox" onchange="toggleSelectAllVisible(this.checked)" title="Selecionar todas as OSs visíveis" />
+                </th>
+                <th>Nº OS</th>
+                <th>Cód. Cliente</th>
+                <th>Status</th>
+                <th>Classificação</th>
+                <th>Cidade / UF</th>
+                <th>Datas</th>
+                <th>Data de atendimento</th>
+                <th>Observações</th>
+                <th class="text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="osTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Script Unificado -->
+  <script>
+    const STORAGE_KEY = "amigos_solucoes_os_v1";
+    const CITY_CACHE_KEY = "amigos_solucoes_city_coords_v1";
+
+    const STATUS_OPTIONS = [
+      "Aguardando atendimento",
+      "Atendida",
+      "Não atendida",
+      "Não definido"
+    ];
+
+    let allOrders = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let cityCoordsCache = JSON.parse(localStorage.getItem(CITY_CACHE_KEY)) || {};
+    let markersMap = {};
+    let activeOpenPopupId = null;
+    let selectedOrderIds = new Set();
+    let currentFilteredOrders = [];
+
+    // Alternância entre Abas
+    function switchTab(tabName) {
+      const btnCadastro = document.getElementById("tabBtnCadastro");
+      const btnOrdens = document.getElementById("tabBtnOrdens");
+      const panelCadastro = document.getElementById("tabPanelCadastro");
+      const panelOrdens = document.getElementById("tabPanelOrdens");
+
+      if (tabName === "cadastro") {
+        btnCadastro.classList.add("active");
+        btnOrdens.classList.remove("active");
+        panelCadastro.classList.remove("hidden");
+        panelOrdens.classList.add("hidden");
+
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 50);
+      } else {
+        btnOrdens.classList.add("active");
+        btnCadastro.classList.remove("active");
+        panelOrdens.classList.remove("hidden");
+        panelCadastro.classList.add("hidden");
+      }
+    }
+
+    // Inicializar Mapa (Esri World Street Map - Centro no RS)
+    const map = L.map("map").setView([-30.0346, -51.2177], 8);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles &copy; Esri"
+    }).addTo(map);
+    const markersLayer = L.layerGroup().addTo(map);
+
+    // Rastreia qual balão está aberto no mapa
+    map.on("popupopen", (e) => {
+      if (e.popup && e.popup._source && e.popup._source.orderId) {
+        activeOpenPopupId = e.popup._source.orderId;
+      }
+    });
+
+    map.on("popupclose", () => {
+      activeOpenPopupId = null;
+    });
+
+    // Referências DOM - Formulário Manual
+    const osForm = document.getElementById("osForm");
+    const notesInput = document.getElementById("notes");
+    const charCount = document.getElementById("charCount");
+    const submitBtn = document.getElementById("submitBtn");
+    const submitBtnText = document.getElementById("submitBtnText");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const formTitle = document.getElementById("formTitle");
+    const editBadge = document.getElementById("editBadge");
+    const editingId = document.getElementById("editingId");
+
+    // Referências DOM - Cadastro em Lote (JSON)
+    const bulkJsonInput = document.getElementById("bulkJsonInput");
+    const bulkAddBtn = document.getElementById("bulkAddBtn");
+    const bulkBtnText = document.getElementById("bulkBtnText");
+    const bulkFeedback = document.getElementById("bulkFeedback");
+
+    // Referências DOM - Filtros
+    const filterSearch = document.getElementById("filterSearch");
+    const filterCity = document.getElementById("filterCity");
+    const filterStatus = document.getElementById("filterStatus");
+    const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+
+    function saveToLocalStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allOrders));
+    }
+
+    function saveCityCache() {
+      localStorage.setItem(CITY_CACHE_KEY, JSON.stringify(cityCoordsCache));
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Retorna a data atual local no formato YYYY-MM-DD (conforme relógio do dispositivo)
+    function getTodayLocalISO() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    // Contador de caracteres
+    notesInput.addEventListener("input", () => {
+      charCount.textContent = `${notesInput.value.length}/150`;
+    });
+
+    // Normaliza chave da cidade para cache
+    function getCityCacheKey(city, state) {
+      return `${city.trim().toLowerCase()}|${state.trim().toUpperCase()}`;
+    }
+
+    // Aplica leve deslocamento espiral caso já existam marcadores no mesmo ponto exato da cidade
+    function applyCollisionOffset(baseCoords, existingOrders) {
+      const nearbyCount = existingOrders.filter(o =>
+        Math.abs(o.lat - baseCoords.lat) < 0.015 &&
+        Math.abs(o.lng - baseCoords.lng) < 0.015
+      ).length;
+
+      if (nearbyCount === 0) return baseCoords;
+
+      const angle = nearbyCount * 2.39996;
+      const radius = 0.0014 * Math.sqrt(nearbyCount);
+
+      return {
+        lat: baseCoords.lat + radius * Math.cos(angle),
+        lng: baseCoords.lng + radius * Math.sin(angle)
+      };
+    }
+
+    // Geocodificação via Nominatim com cache local
+    async function geocodeLocation(city, state, useRateDelay = false) {
+      const cacheKey = getCityCacheKey(city, state);
+
+      if (cityCoordsCache[cacheKey]) {
+        return cityCoordsCache[cacheKey];
+      }
+
+      if (useRateDelay) {
+        await sleep(1100);
+      }
+
+      const queryStr = `${city}, ${state}, Brasil`;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(queryStr)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const coords = {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon)
+          };
+          cityCoordsCache[cacheKey] = coords;
+          saveCityCache();
+          return coords;
+        }
+      } catch (err) {
+        console.warn("Falha na consulta de coordenadas:", err);
+      }
+
+      return { lat: -30.0346, lng: -51.2177 };
+    }
+
+    // Converte data "DD/MM/YYYY" para "YYYY-MM-DD"
+    function parseDateBRToISO(dateStr) {
+      if (!dateStr) return "";
+      const clean = String(dateStr).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+
+      const parts = clean.split("/");
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return `${year.padStart(4, "20")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      }
+      return "";
+    }
+
+    // Retorna data de coleta
+    function getCollectionDate(order) {
+      return order.collectionDate || order.deadline || "";
+    }
+
+    // Salvar ou Atualizar OS manualmente
+    osForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      submitBtn.disabled = true;
+      submitBtnText.textContent = "Localizando e salvando...";
+
+      const city = document.getElementById("city").value.trim();
+      const state = document.getElementById("state").value;
+      const statusVal = document.getElementById("osStatus").value || "Aguardando atendimento";
+      const typeVal = document.getElementById("osType").value.trim() || "Não classificado";
+
+      const baseCoords = await geocodeLocation(city, state, false);
+      const otherOrders = allOrders.filter(o => o.id !== editingId.value);
+      const finalCoords = applyCollisionOffset(baseCoords, otherOrders);
+
+      let attendanceDate = "";
+      if (statusVal === "Atendida") {
+        const existingOrder = editingId.value ? allOrders.find(o => o.id === editingId.value) : null;
+        attendanceDate = (existingOrder && existingOrder.attendanceDate) ? existingOrder.attendanceDate : getTodayLocalISO();
+      }
+
+      const orderData = {
+        id: editingId.value || Date.now().toString(),
+        osNumber: document.getElementById("osNumber").value.trim(),
+        clientCode: document.getElementById("clientCode").value.trim(),
+        status: statusVal,
+        type: typeVal,
+        city,
+        state,
+        collectionDate: document.getElementById("collectionDate").value,
+        scheduledDate: document.getElementById("scheduledDate").value,
+        attendanceDate,
+        notes: document.getElementById("notes").value.trim(),
+        lat: finalCoords.lat,
+        lng: finalCoords.lng
+      };
+
+      if (editingId.value) {
+        const index = allOrders.findIndex(o => o.id === editingId.value);
+        if (index !== -1) allOrders[index] = orderData;
+        exitEditMode();
+      } else {
+        allOrders.unshift(orderData);
+        osForm.reset();
+        document.getElementById("state").value = "RS";
+        charCount.textContent = "0/150";
+      }
+
+      saveToLocalStorage();
+      updateCityFilterOptions();
+      applyFiltersAndRender();
+
+      submitBtn.disabled = false;
+      submitBtnText.textContent = "Adicionar ao Mapa";
+    });
+
+    // Cadastro em Lote via JSON
+    bulkAddBtn.addEventListener("click", async () => {
+      const rawText = bulkJsonInput.value.trim();
+      hideBulkFeedback();
+
+      if (!rawText) {
+        showBulkFeedback("Cole o conteúdo JSON antes de clicar em Adicionar.", "error");
+        return;
+      }
+
+      let parsedList;
+      try {
+        const sanitized = rawText.replace(/,\s*([\]}])/g, "$1");
+        parsedList = JSON.parse(sanitized);
+      } catch (err) {
+        showBulkFeedback("Formato JSON inválido. Verifique colchetes, chaves e aspas.", "error");
+        return;
+      }
+
+      if (!Array.isArray(parsedList) || parsedList.length === 0) {
+        showBulkFeedback("O JSON deve conter uma lista [ ... ] com pelo menos uma OS.", "error");
+        return;
+      }
+
+      bulkAddBtn.disabled = true;
+      let addedCount = 0;
+      let needsApiDelay = false;
+
+      try {
+        for (let i = 0; i < parsedList.length; i++) {
+          const item = parsedList[i];
+          const osNum = item.os ? String(item.os).trim() : "";
+          const city = item.cidade ? String(item.cidade).trim() : "";
+
+          if (!osNum || !city) continue;
+
+          const state = item.estado ? String(item.estado).trim().toUpperCase() : "RS";
+          const cacheKey = getCityCacheKey(city, state);
+          const isUncached = !cityCoordsCache[cacheKey];
+
+          bulkBtnText.textContent = `Processando ${i + 1} de ${parsedList.length}...`;
+
+          const baseCoords = await geocodeLocation(city, state, isUncached && needsApiDelay);
+          if (isUncached) needsApiDelay = true;
+
+          const finalCoords = applyCollisionOffset(baseCoords, allOrders);
+          const itemStatus = item.status ? String(item.status).trim() : "Aguardando atendimento";
+          
+          let itemAttendance = "";
+          if (itemStatus === "Atendida") {
+            itemAttendance = parseDateBRToISO(item.atendimento || "") || getTodayLocalISO();
+          }
+
+          const newOrder = {
+            id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+            osNumber: osNum,
+            clientCode: item.cliente ? String(item.cliente).trim() : "",
+            status: itemStatus,
+            type: item.classificacao || item.tipo || "Não classificado",
+            city,
+            state,
+            collectionDate: parseDateBRToISO(item.coleta),
+            scheduledDate: parseDateBRToISO(item.agendamento || ""),
+            attendanceDate: itemAttendance,
+            notes: item.observacoes ? String(item.observacoes).trim().slice(0, 150) : "",
+            lat: finalCoords.lat,
+            lng: finalCoords.lng
+          };
+
+          allOrders.unshift(newOrder);
+          addedCount++;
+        }
+
+        if (addedCount === 0) {
+          showBulkFeedback("Nenhuma OS válida encontrada (verifique os campos 'os' e 'cidade').", "error");
+        } else {
+          saveToLocalStorage();
+          updateCityFilterOptions();
+          applyFiltersAndRender();
+          bulkJsonInput.value = "";
+          showBulkFeedback(`${addedCount} OS(s) adicionada(s) ao mapa e à tabela com sucesso!`, "success");
+        }
+      } catch (err) {
+        console.error(err);
+        showBulkFeedback("Ocorreu um erro ao processar a lista de OSs.", "error");
+      } finally {
+        bulkAddBtn.disabled = false;
+        bulkBtnText.textContent = "Adicionar";
+      }
+    });
+
+    function showBulkFeedback(message, type) {
+      bulkFeedback.textContent = message;
+      bulkFeedback.className = `bulk-feedback ${
+        type === "success" ? "bulk-feedback-success" : "bulk-feedback-error"
+      }`;
+    }
+
+    function hideBulkFeedback() {
+      bulkFeedback.className = "bulk-feedback hidden";
+      bulkFeedback.textContent = "";
+    }
+
+    function updateCityFilterOptions() {
+      const currentSelected = filterCity.value;
+      const cities = [...new Set(allOrders.map(o => o.city).filter(Boolean))].sort();
+      filterCity.innerHTML = `<option value="">Todas as cidades</option>`;
+      cities.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        if (c === currentSelected) opt.selected = true;
+        filterCity.appendChild(opt);
+      });
+    }
+
+    function applyFiltersAndRender() {
+      document.getElementById("tabOrdersCount").textContent = allOrders.length;
+
+      // Remove IDs selecionados que não existem mais
+      const validIds = new Set(allOrders.map(o => o.id));
+      selectedOrderIds.forEach(id => {
+        if (!validIds.has(id)) selectedOrderIds.delete(id);
+      });
+
+      const term = filterSearch.value.trim().toLowerCase();
+      const cityVal = filterCity.value;
+      const statusVal = filterStatus.value;
+
+      const filtered = allOrders.filter(o => {
+        const matchSearch =
+          !term ||
+          (o.osNumber && o.osNumber.toLowerCase().includes(term)) ||
+          (o.clientCode && o.clientCode.toLowerCase().includes(term));
+
+        const matchCity = !cityVal || o.city === cityVal;
+        const matchStatus = !statusVal || o.status === statusVal;
+
+        return matchSearch && matchCity && matchStatus;
+      });
+
+      currentFilteredOrders = filtered;
+      renderMap(filtered);
+      renderTable(filtered);
+      updateSelectionUI(filtered);
+    }
+
+    // Seleção individual de OS
+    function toggleOrderSelection(id, isChecked) {
+      if (isChecked) {
+        selectedOrderIds.add(id);
+      } else {
+        selectedOrderIds.delete(id);
+      }
+
+      const row = document.querySelector(`tr[data-order-id="${id}"]`);
+      if (row) {
+        row.classList.toggle("row-selected", isChecked);
+      }
+
+      updateSelectionUI(currentFilteredOrders);
+    }
+
+    // Selecionar / Desmarcar todas as OSs visíveis na tabela
+    function toggleSelectAllVisible(isChecked) {
+      currentFilteredOrders.forEach(order => {
+        if (isChecked) {
+          selectedOrderIds.add(order.id);
+        } else {
+          selectedOrderIds.delete(order.id);
+        }
+      });
+
+      renderTable(currentFilteredOrders);
+      updateSelectionUI(currentFilteredOrders);
+    }
+
+    // Atualiza contadores e botões de exclusão
+    function updateSelectionUI(visibleOrders) {
+      const totalSelected = selectedOrderIds.size;
+      const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+      const selectedCountBadge = document.getElementById("selectedCountBadge");
+      const deleteAllBtn = document.getElementById("deleteAllBtn");
+      const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+      const mobileSelectAllCheckbox = document.getElementById("mobileSelectAllCheckbox");
+      const mobileSelectBar = document.getElementById("mobileSelectBar");
+      const mobileSelectedHint = document.getElementById("mobileSelectedHint");
+
+      selectedCountBadge.textContent = totalSelected;
+
+      if (totalSelected > 0) {
+        deleteSelectedBtn.classList.remove("hidden");
+        mobileSelectedHint.textContent = `${totalSelected} selecionada(s)`;
+      } else {
+        deleteSelectedBtn.classList.add("hidden");
+        mobileSelectedHint.textContent = "";
+      }
+
+      deleteAllBtn.disabled = allOrders.length === 0;
+
+      if (visibleOrders.length === 0) {
+        mobileSelectBar.classList.add("hidden");
+      } else {
+        mobileSelectBar.classList.remove("hidden");
+      }
+
+      const visibleSelectedCount = visibleOrders.filter(o => selectedOrderIds.has(o.id)).length;
+      const allVisibleSelected = visibleOrders.length > 0 && visibleSelectedCount === visibleOrders.length;
+      const someVisibleSelected = visibleSelectedCount > 0 && visibleSelectedCount < visibleOrders.length;
+
+      [selectAllCheckbox, mobileSelectAllCheckbox].forEach(cb => {
+        if (!cb) return;
+        cb.disabled = visibleOrders.length === 0;
+        cb.checked = allVisibleSelected;
+        cb.indeterminate = someVisibleSelected;
+      });
+    }
+
+    // Excluir OSs selecionadas
+    function deleteSelectedOrders() {
+      const count = selectedOrderIds.size;
+      if (count === 0) return;
+
+      const msg = count === 1
+        ? "Deseja realmente excluir a OS selecionada?"
+        : `Deseja realmente excluir as ${count} OSs selecionadas?`;
+
+      if (confirm(msg)) {
+        if (editingId.value && selectedOrderIds.has(editingId.value)) {
+          exitEditMode();
+        }
+        if (activeOpenPopupId && selectedOrderIds.has(activeOpenPopupId)) {
+          activeOpenPopupId = null;
+        }
+
+        allOrders = allOrders.filter(o => !selectedOrderIds.has(o.id));
+        selectedOrderIds.clear();
+        saveToLocalStorage();
+        updateCityFilterOptions();
+        applyFiltersAndRender();
+      }
+    }
+
+    // Excluir todas as OSs cadastradas
+    function deleteAllOrders() {
+      if (allOrders.length === 0) return;
+
+      if (confirm(`Atenção: deseja realmente excluir TODAS as ${allOrders.length} OSs cadastradas? Esta ação não pode ser desfeita.`)) {
+        allOrders = [];
+        selectedOrderIds.clear();
+        activeOpenPopupId = null;
+        if (editingId.value) exitEditMode();
+
+        saveToLocalStorage();
+        updateCityFilterOptions();
+        applyFiltersAndRender();
+      }
+    }
+
+    // Cria ícone colorido do marcador de acordo com o status
+    function createStatusPinIcon(status) {
+      const pinColorMap = {
+        "Atendida": "pin-atendida",
+        "Não atendida": "pin-nao-atendida",
+        "Aguardando atendimento": "pin-aguardando",
+        "Não definido": "pin-indefinido"
+      };
+      const pinClass = pinColorMap[status] || "pin-indefinido";
+
+      return L.divIcon({
+        className: "custom-pin-wrapper",
+        html: `<div class="custom-pin ${pinClass}"></div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 26],
+        popupAnchor: [0, -24]
+      });
+    }
+
+    function buildPopupHtml(order) {
+      const locationText = formatLocation(order);
+      const collectionIso = getCollectionDate(order);
+      const badgeClass = getStatusClass(order.status);
+
+      return `
+        <div class="map-popup">
+          <div class="map-popup-title">OS #${escapeHtml(order.osNumber)}</div>
+          ${order.clientCode ? `<div><strong>Cliente:</strong> ${escapeHtml(order.clientCode)}</div>` : ""}
+          <div><strong>Status:</strong> <span class="status-badge-popup ${badgeClass}">${escapeHtml(order.status)}</span></div>
+          <div><strong>Serviço:</strong> ${escapeHtml(order.type)}</div>
+          <div><strong>Local:</strong> ${escapeHtml(locationText)}</div>
+          <div><strong>Coleta:</strong> ${formatDateBR(collectionIso)}</div>
+          ${order.scheduledDate ? `<div><strong>Agendado:</strong> ${formatDateBR(order.scheduledDate)}</div>` : ""}
+          ${order.attendanceDate ? `<div><strong>Atendimento:</strong> ${formatDateBR(order.attendanceDate)}</div>` : ""}
+          ${order.notes ? `<div class="map-popup-notes">"${escapeHtml(order.notes)}"</div>` : ""}
+        </div>
+      `;
+    }
+
+    function renderMap(orders) {
+      const previouslyOpenId = activeOpenPopupId;
+      markersLayer.clearLayers();
+      markersMap = {};
+      document.getElementById("mapCounter").textContent = `${orders.length} OSs no mapa`;
+
+      orders.forEach(order => {
+        if (order.lat && order.lng) {
+          const marker = L.marker([order.lat, order.lng], {
+            icon: createStatusPinIcon(order.status)
+          }).bindPopup(buildPopupHtml(order));
+
+          marker.orderId = order.id;
+          marker.addTo(markersLayer);
+          markersMap[order.id] = marker;
+        }
+      });
+
+      if (previouslyOpenId && markersMap[previouslyOpenId]) {
+        markersMap[previouslyOpenId].openPopup();
+      }
+    }
+
+    function renderTable(orders) {
+      const tbody = document.getElementById("osTableBody");
+      if (orders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="empty-row">Nenhuma Ordem de Serviço cadastrada.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = orders.map(order => {
+        const collectionIso = getCollectionDate(order);
+        const attDate = order.attendanceDate || "";
+        const attClass = attDate ? "attendance-date-input attendance-date-filled" : "attendance-date-input";
+        const isChecked = selectedOrderIds.has(order.id);
+        const rowClass = isChecked ? "row-selected" : "";
+
+        return `
+          <tr data-order-id="${order.id}" class="${rowClass}">
+            <td class="col-select" data-label="Selecionar">
+              <input
+                type="checkbox"
+                class="os-checkbox"
+                ${isChecked ? "checked" : ""}
+                onchange="toggleOrderSelection('${order.id}', this.checked)"
+                aria-label="Selecionar OS ${escapeHtml(order.osNumber)}"
+              />
+            </td>
+            <td class="nowrap" data-label="Nº OS">
+              <button onclick="focusOnMap('${order.id}')" class="os-link-btn" title="Ver no mapa">
+                <i class="fa-solid fa-location-dot"></i> ${escapeHtml(order.osNumber)}
+              </button>
+            </td>
+            <td class="cell-client nowrap" data-label="Cód. Cliente">
+              ${order.clientCode ? escapeHtml(order.clientCode) : '<span class="text-muted-light">—</span>'}
+            </td>
+            <td class="nowrap" data-label="Status">
+              ${renderStatusSelect(order.id, order.status)}
+            </td>
+            <td class="cell-type" data-label="Classificação">
+              ${escapeHtml(order.type)}
+            </td>
+            <td class="cell-location nowrap" data-label="Cidade / UF">
+              ${escapeHtml(formatLocation(order))}
+            </td>
+            <td class="cell-dates nowrap" data-label="Datas">
+              <div class="date-collection">Coleta: ${formatDateBR(collectionIso)}</div>
+              <div class="date-scheduled">Agend.: ${order.scheduledDate ? formatDateBR(order.scheduledDate) : "Pendente"}</div>
+            </td>
+            <td class="nowrap" data-label="Data de atendimento">
+              <input
+                type="date"
+                class="${attClass}"
+                value="${escapeHtml(attDate)}"
+                onchange="changeAttendanceDate('${order.id}', this.value)"
+                title="Data em que o serviço foi executado"
+              />
+            </td>
+            <td class="cell-notes" data-label="Observações" title="${escapeHtml(order.notes || "")}">
+              ${order.notes ? escapeHtml(order.notes) : "—"}
+            </td>
+            <td class="actions-cell" data-label="Ações">
+              <button onclick="focusOnMap('${order.id}')" class="action-btn action-map" title="Focar no mapa">
+                <i class="fa-solid fa-map-pin"></i> Mapa
+              </button>
+              <button onclick="startEdit('${order.id}')" class="action-btn action-edit" title="Editar OS">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button onclick="deleteOrder('${order.id}', '${escapeHtml(order.osNumber)}')" class="action-btn action-delete" title="Excluir OS">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // Altera o status da OS pela tabela: preenche a data se for 'Atendida', ou limpa caso contrário
+    function changeOrderStatus(id, newStatus) {
+      const order = allOrders.find(o => o.id === id);
+      if (!order) return;
+
+      order.status = newStatus;
+
+      if (newStatus === "Atendida") {
+        if (!order.attendanceDate) {
+          order.attendanceDate = getTodayLocalISO();
+        }
+      } else {
+        order.attendanceDate = "";
+      }
+
+      saveToLocalStorage();
+
+      if (editingId.value === id) {
+        document.getElementById("osStatus").value = newStatus;
+      }
+
+      const marker = markersMap[id];
+      if (marker) {
+        marker.setIcon(createStatusPinIcon(newStatus));
+        marker.setPopupContent(buildPopupHtml(order));
+      }
+
+      applyFiltersAndRender();
+    }
+
+    // Altera manualmente a Data de atendimento na tabela
+    function changeAttendanceDate(id, newDate) {
+      const order = allOrders.find(o => o.id === id);
+      if (!order) return;
+
+      order.attendanceDate = newDate;
+      saveToLocalStorage();
+
+      const marker = markersMap[id];
+      if (marker) {
+        marker.setPopupContent(buildPopupHtml(order));
+      }
+
+      applyFiltersAndRender();
+    }
+
+    function focusOnMap(id) {
+      const order = allOrders.find(o => o.id === id);
+      const marker = markersMap[id];
+      if (order && marker) {
+        switchTab("cadastro");
+        setTimeout(() => {
+          document.getElementById("map").scrollIntoView({ behavior: "smooth", block: "center" });
+          map.setView([order.lat, order.lng], 13);
+          marker.openPopup();
+        }, 80);
+      }
+    }
+
+    function startEdit(id) {
+      const order = allOrders.find(o => o.id === id);
+      if (!order) return;
+
+      editingId.value = order.id;
+      document.getElementById("osNumber").value = order.osNumber || "";
+      document.getElementById("clientCode").value = order.clientCode || "";
+      document.getElementById("osStatus").value = order.status || "Aguardando atendimento";
+      document.getElementById("osType").value = order.type === "Não classificado" ? "" : (order.type || "");
+      document.getElementById("city").value = order.city || "";
+      document.getElementById("state").value = order.state || "RS";
+      document.getElementById("collectionDate").value = getCollectionDate(order);
+      document.getElementById("scheduledDate").value = order.scheduledDate || "";
+      document.getElementById("notes").value = order.notes || "";
+      charCount.textContent = `${(order.notes || "").length}/150`;
+
+      formTitle.innerHTML = `<i class="fa-solid fa-pen-to-square icon-amber"></i> Editar OS #${escapeHtml(order.osNumber)}`;
+      editBadge.classList.remove("hidden");
+      submitBtn.classList.remove("btn-primary");
+      submitBtn.classList.add("btn-success");
+      submitBtnText.textContent = "Salvar Alterações";
+      cancelEditBtn.classList.remove("hidden");
+
+      switchTab("cadastro");
+      setTimeout(() => {
+        osForm.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+
+    function exitEditMode() {
+      editingId.value = "";
+      osForm.reset();
+      document.getElementById("state").value = "RS";
+      charCount.textContent = "0/150";
+
+      formTitle.innerHTML = `<i class="fa-solid fa-file-circle-plus icon-blue"></i> Cadastrar Nova OS`;
+      editBadge.classList.add("hidden");
+      submitBtn.classList.remove("btn-success");
+      submitBtn.classList.add("btn-primary");
+      submitBtnText.textContent = "Adicionar ao Mapa";
+      cancelEditBtn.classList.add("hidden");
+    }
+
+    cancelEditBtn.addEventListener("click", exitEditMode);
+
+    function deleteOrder(id, osNum) {
+      if (confirm(`Deseja realmente excluir a OS #${osNum}?`)) {
+        allOrders = allOrders.filter(o => o.id !== id);
+        selectedOrderIds.delete(id);
+        saveToLocalStorage();
+        if (editingId.value === id) exitEditMode();
+        if (activeOpenPopupId === id) activeOpenPopupId = null;
+        updateCityFilterOptions();
+        applyFiltersAndRender();
+      }
+    }
+
+    // Eventos de Filtro
+    filterSearch.addEventListener("input", applyFiltersAndRender);
+    filterCity.addEventListener("change", applyFiltersAndRender);
+    filterStatus.addEventListener("change", applyFiltersAndRender);
+    clearFiltersBtn.addEventListener("click", () => {
+      filterSearch.value = "";
+      filterCity.value = "";
+      filterStatus.value = "";
+      applyFiltersAndRender();
+    });
+
+    // Exportar PDF em formato planilha A4 Paisagem
+    document.getElementById("exportPdfBtn").addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const docPdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+      docPdf.setFontSize(14);
+      docPdf.setTextColor(30, 58, 138);
+      docPdf.text("Relatório de Ordens de Serviço e Rotas — Amigos Soluções", 14, 15);
+
+      docPdf.setFontSize(9);
+      docPdf.setTextColor(100);
+      docPdf.text(`Gerado em: ${new Date().toLocaleString("pt-BR")} | Total de registros: ${allOrders.length}`, 14, 21);
+
+      const rows = allOrders.map(o => {
+        const collectionIso = getCollectionDate(o);
+        return [
+          o.osNumber,
+          o.clientCode || "-",
+          o.status,
+          o.type,
+          formatLocation(o),
+          `Coleta: ${formatDateBR(collectionIso)}\nAgend: ${o.scheduledDate ? formatDateBR(o.scheduledDate) : "Pendente"}`,
+          o.attendanceDate ? formatDateBR(o.attendanceDate) : "-",
+          o.notes || "-"
+        ];
+      });
+
+      docPdf.autoTable({
+        startY: 26,
+        head: [["Nº OS", "Cód. Cliente", "Status", "Classificação", "Cidade / UF", "Datas", "Atendimento", "Observações"]],
+        body: rows,
+        styles: { fontSize: 8, cellPadding: 2.2, valign: "middle" },
+        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { cellWidth: 22, fontStyle: "bold" },
+          1: { cellWidth: 24 },
+          2: { cellWidth: 32 },
+          3: { cellWidth: 44 },
+          4: { cellWidth: 34 },
+          5: { cellWidth: 34 },
+          6: { cellWidth: 24 },
+          7: { cellWidth: "auto" }
+        }
+      });
+
+      const todayStr = getTodayLocalISO();
+      docPdf.save(`rotas_os_${todayStr}.pdf`);
+    });
+
+    function formatLocation(o) {
+      return [o.city, o.state].filter(Boolean).join(" - ");
+    }
+
+    function formatDateBR(isoDate) {
+      if (!isoDate) return "-";
+      const [y, m, d] = isoDate.split("-");
+      return `${d}/${m}/${y}`;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return "";
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function getStatusClass(status) {
+      const mapClasses = {
+        "Atendida": "badge-atendida",
+        "Não atendida": "badge-nao-atendida",
+        "Aguardando atendimento": "badge-aguardando",
+        "Não definido": "badge-indefinido"
+      };
+      return mapClasses[status] || "badge-indefinido";
+    }
+
+    function renderStatusSelect(id, currentStatus) {
+      const cls = getStatusClass(currentStatus);
+      const optionsHtml = STATUS_OPTIONS.map(opt => {
+        const selected = opt === currentStatus ? "selected" : "";
+        return `<option value="${escapeHtml(opt)}" ${selected}>${escapeHtml(opt)}</option>`;
+      }).join("");
+
+      return `
+        <select
+          class="status-select-inline ${cls}"
+          onchange="changeOrderStatus('${id}', this.value)"
+          title="Alterar status da OS"
+        >
+          ${optionsHtml}
+        </select>
+      `;
+    }
+
+    // Inicializar tela
+    updateCityFilterOptions();
+    applyFiltersAndRender();
+  </script>
+</body>
+</html>
